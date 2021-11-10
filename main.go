@@ -39,9 +39,9 @@ func ParentDir(path string) (string, error) {
 	return parent, nil
 }
 
-// CopyTree copies files keeping directory tee, then returns paths of copied files.
+// CopyTree copies files keeping directory tree, then returns paths of copied files.
 //
-// The operation is similar to "cp" in linux, "xcopy" in windows.
+// The operation is similar to "cp -r" in linux, "xcopy" in windows.
 // Empty directories are ignored.
 func CopyTree(src, dst string) ([]string, error) {
 	// check dst is not a file. dst must be a directory.
