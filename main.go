@@ -15,6 +15,7 @@ import (
 )
 
 // ParentDir returns the parent directory's path in absolute type.
+//
 // The trailing separator is ignored.
 // For example, when "foo" is a directory, all inputs return the same output "/root/".
 // /root/foo, /root/foo/, /root/bar.txt
