@@ -23,8 +23,10 @@ var (
 // ParentDir returns the parent directory's path in absolute type.
 //
 // The trailing separator is ignored.
-// For example, when "foo" is a directory, all inputs return the same output "/root/".
+// For example, when "foo" is a directory, all inputs return the same output "/root".
 // /root/foo, /root/foo/, /root/bar.txt
+//
+// Output is cleaned by filepath.Clean.
 func ParentDir(path string) (string, error) {
 	// remove trailing slash, ./ and so on.
 	path = filepath.Clean(path)
@@ -43,6 +45,7 @@ func ParentDir(path string) (string, error) {
 // CopyTree copies files keeping directory tree.
 //
 // The operation is similar to "cp -r" in linux, "xcopy" in windows.
+// Empty directories are copied too.
 func CopyTree(src, dst string) error {
 	// when src is a file, do copyFile then return.
 	info, err := os.Stat(src)
