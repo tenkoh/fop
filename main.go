@@ -9,11 +9,10 @@ package fop
 
 import (
 	"errors"
-	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 var (
@@ -27,77 +26,81 @@ var (
 // For example, when "foo" is a directory, all inputs return the same output "/root/".
 // /root/foo, /root/foo/, /root/bar.txt
 func ParentDir(path string) (string, error) {
-	p, err := filepath.Abs(path)
+	// remove trailing slash, ./ and so on.
+	path = filepath.Clean(path)
+	info, err := os.Stat(path)
 	if err != nil {
-		return "", fmt.Errorf("invalid path; %w", err)
+		return "", err
 	}
-	// remove the last separator
-	if strings.HasSuffix(p, string(os.PathSeparator)) {
-		p = filepath.Dir(p)
+	if !info.IsDir() {
+		p, _ := filepath.Split(path)
+		p = filepath.Clean(p)
+		return p, nil
 	}
-	parent := filepath.Dir(p)
-	return parent, nil
+	return filepath.Dir(path), nil
 }
 
-// CopyTree copies files keeping directory tree, then returns paths of copied files.
+// CopyTree copies files keeping directory tree.
 //
 // The operation is similar to "cp -r" in linux, "xcopy" in windows.
-// Empty directories are ignored.
-func CopyTree(src, dst string) ([]string, error) {
-	// check dst is not a file. dst must be a directory.
-	info, err := os.Stat(dst)
+func CopyTree(src, dst string) error {
+	// when src is a file, do copyFile then return.
+	info, err := os.Stat(src)
 	if err != nil {
-		if !info.IsDir() {
-			return nil, ErrInvalidDestination
-		}
-	}
-	// if src is a file, just copy it into dst
-	info, err = os.Stat(src)
-	if err != nil {
-		return nil, err
+		return err
 	}
 	if !info.IsDir() {
 		savepath := filepath.Join(dst, filepath.Base(src))
 		if err := copyFile(src, savepath); err != nil {
-			return nil, err
+			return err
 		}
-		return []string{savepath}, nil
+		return nil
 	}
 
-	// if src is a directory, find all files and copy all.
-	files, err := WalkFiles(src)
-	if err != nil {
-		return nil, err
-	}
-	copied := []string{}
-	for _, file := range files {
-		rel, err := filepath.Rel(src, file)
+	err = filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil, err
+			return err
+		}
+		rel, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
 		}
 		savepath := filepath.Join(dst, rel)
-		if err := copyFile(file, savepath); err != nil {
-			return nil, err
+		if !d.IsDir() {
+			if err := copyFile(path, savepath); err != nil {
+				return err
+			}
+			return nil
 		}
-		copied = append(copied, savepath)
+		_, err = os.Stat(savepath)
+		if err != nil {
+			if err := os.MkdirAll(savepath, 0777); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
-	return copied, nil
+	return nil
 }
 
 // src, dst must be filepath, not directory.
 func copyFile(src, dst string) error {
-	dir := filepath.Dir(dst)
-	_, err := os.Stat(dir)
-	if err != nil {
-		if err := os.MkdirAll(dir, 0777); err != nil {
-			return err
-		}
-	}
 	f, err := os.Open(src)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
+
+	dir := filepath.Dir(dst)
+	_, err = os.Stat(dir)
+	if err != nil {
+		if err := os.MkdirAll(dir, 0777); err != nil {
+			return err
+		}
+	}
 	g, err := os.Create(dst)
 	if err != nil {
 		return err
@@ -107,38 +110,4 @@ func copyFile(src, dst string) error {
 		return err
 	}
 	return nil
-}
-
-// WalkFiles returns a file tree under "dir".
-//
-// Empty directories are ignored.
-func WalkFiles(dir string) ([]string, error) {
-	// when filepath is passed, return it.
-	info, err := os.Stat(dir)
-	if err != nil {
-		return nil, err
-	}
-	if !info.IsDir() {
-		// using filepath.Join to fit output path style.
-		return []string{filepath.Join(dir)}, nil
-	}
-
-	paths := []string{}
-	files, err := os.ReadDir(dir)
-	if err != nil {
-		return nil, err
-	}
-	for _, file := range files {
-		fullpath := filepath.Join(dir, file.Name())
-		if !file.IsDir() {
-			paths = append(paths, fullpath)
-			continue
-		}
-		subpaths, err := WalkFiles(fullpath)
-		if err != nil {
-			return nil, err
-		}
-		paths = append(paths, subpaths...)
-	}
-	return paths, nil
 }
