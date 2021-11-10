@@ -8,6 +8,7 @@ import (
 )
 
 // ParentDir returns the parent directory's path.
+// See examples in the test file.
 func ParentDir(path string) (string, error) {
 	p, err := filepath.Abs(path)
 	if err != nil {

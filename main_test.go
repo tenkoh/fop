@@ -21,7 +21,8 @@ func TestParentDir(t *testing.T) {
 		// TODO: Add test cases.
 		{"with trailing separator", args{"./testdata/ParentDir/hoge/fuga/"}, dstAbs, false},
 		{"without trailing separator", args{"./testdata/ParentDir/hoge/fuga"}, dstAbs, false},
-		{"file", args{"./testdata/ParentDir/hoge/piyo.txt"}, dstAbs, false},
+		{"file with extension", args{"./testdata/ParentDir/hoge/piyo.txt"}, dstAbs, false},
+		{"file without extension", args{"./testdata/ParentDir/hoge/piyo"}, dstAbs, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
