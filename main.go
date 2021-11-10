@@ -1,3 +1,10 @@
+// Copyright: tenkoh
+
+/*
+fop: package for operating files.
+
+This package includes some utility functions to operate files and directories.
+*/
 package fop
 
 import (
@@ -7,8 +14,10 @@ import (
 	"strings"
 )
 
-// ParentDir returns the parent directory's path.
-// See examples in the test file.
+// ParentDir returns the parent directory's path in absolute type.
+// The trailing separator is ignored.
+// For example, when "foo" is a directory, all inputs return the same output "/root/".
+// /root/foo, /root/foo/, /root/bar.txt
 func ParentDir(path string) (string, error) {
 	p, err := filepath.Abs(path)
 	if err != nil {
